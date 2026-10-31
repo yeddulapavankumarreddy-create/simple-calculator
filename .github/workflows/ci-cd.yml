@@ -1,0 +1,61 @@
+name: Calculator CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Calculator
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          test -f index.html
+          test -f style.css
+          test -f script.js
+          test -f README.md
+
+      - name: Check JavaScript syntax
+        run: node --check script.js
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website files
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
